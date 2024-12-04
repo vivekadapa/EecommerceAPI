@@ -30,6 +30,11 @@ export const createUser = async (req: Request, res: Response) => {
 export const updateUser = async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
+        const userId = Number(id)
+        if (isNaN(userId)) {
+            res.status(400).json({ error: "Invalid user ID" });
+            return;
+        }
         const validatedData = userSchema.partial().parse(req.body);
         const user = await prisma.user.update({
             where: { id: Number(id) },
@@ -49,7 +54,12 @@ export const updateUser = async (req: Request, res: Response) => {
 export const getUser = async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
     try {
-        const user = await prisma.user.findUnique({ where: { id: Number(id) } });
+        const userId = Number(id)
+        if (isNaN(userId)) {
+            res.status(400).json({ error: "Invalid user ID" });
+            return;
+        }
+        const user = await prisma.user.findUnique({ where: { id: userId } });
         if (!user) {
             res.status(404).json({ error: 'User not found' });
             return;
