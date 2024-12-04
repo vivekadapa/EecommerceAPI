@@ -1,13 +1,27 @@
 import { Request, Response } from 'express';
 import prisma from '../db/prisma'
+import { z } from 'zod';
 
+const userSchema = z.object({
+    name: z.string().min(1, "Name is required"),
+    email: z.string().email("Invalid email address"),
+    phone: z.string().min(10, "Phone number must be at least 10 characters").max(15, "Phone number is too long"),
+});
 
 export const createUser = async (req: Request, res: Response) => {
-    const { name, email, phone } = req.body;
     try {
-        const user = await prisma.user.create({ data: { name, email, phone } });
+        const validatedData = userSchema.parse(req.body);
+        const user = await prisma.user.create({ data: validatedData });
         res.status(201).json(user);
-    } catch (error) {
+    } catch (error: any) {
+        if (error instanceof z.ZodError) {
+            res.status(400).json({ error: "Validation error", details: error.errors });
+            return;
+        }
+        if (error.code === 'P2002' && error.meta?.target?.includes('email')) {
+            res.status(409).json({ error: "Email already exists" });
+            return;
+        }
         res.status(500).json({ error: 'Failed to create user', details: error });
     }
 };
@@ -15,14 +29,18 @@ export const createUser = async (req: Request, res: Response) => {
 
 export const updateUser = async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { name, email, phone } = req.body;
     try {
+        const validatedData = userSchema.partial().parse(req.body);
         const user = await prisma.user.update({
             where: { id: Number(id) },
-            data: { name, email, phone },
+            data: validatedData,
         });
         res.status(200).json(user);
     } catch (error) {
+        if (error instanceof z.ZodError) {
+            res.status(400).json({ error: "Validation error", details: error.errors });
+            return;
+        }
         res.status(404).json({ error: 'User not found', details: error });
     }
 };
