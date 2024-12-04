@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../db/prisma';
 import { z } from 'zod';
 
-const createProductSchema = z.object({
+const productSchema = z.object({
     name: z.string().min(1, "Product name is required"),
     category: z.string().min(1, "Category is required"),
     price: z.number().positive("Price must be a positive number"),
@@ -11,7 +11,7 @@ const createProductSchema = z.object({
 
 export const createProduct = async (req: Request, res: Response) => {
     try {
-        const validatedData = createProductSchema.parse(req.body);
+        const validatedData = productSchema.parse(req.body);
         const product = await prisma.product.create({
             data: validatedData
         });
@@ -30,7 +30,7 @@ export const createProduct = async (req: Request, res: Response) => {
 export const updateProduct = async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
-        const validatedData = createProductSchema.partial().parse(req.body);
+        const validatedData = productSchema.partial().parse(req.body);
         const product = await prisma.product.update({
             where: { id: Number(id) },
             data: validatedData,
