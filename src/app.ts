@@ -8,6 +8,10 @@ const app = express();
 
 app.use(bodyParser.json());
 
+app.get('/readiness', (req, res) => {
+    res.send("Server is ready")
+})
+
 app.use('/api/users', userRoutes)
 app.use('/api/products', productRoutes)
 app.use('/api/orders', orderRoutes)
