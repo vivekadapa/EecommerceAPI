@@ -10,40 +10,95 @@ const orderSchema = z.object({
 });
 
 
-// Clean the code later by adding a middleware to check if the the product has stock left
 export const createOrder = async (req: Request, res: Response) => {
     try {
-
         const validatedData = orderSchema.parse(req.body);
         const { userId, productId, quantity } = validatedData;
-        const product = await prisma.product.findUnique({ where: { id: productId } });
+
+        const product = await prisma.product.findUnique({
+            where: { id: productId },
+        });
+
         if (!product) {
             res.status(404).json({ error: 'Product not found' });
             return;
         }
+
         if (product.stock < quantity) {
             res.status(400).json({ error: 'Insufficient stock' });
             return;
         }
 
-        const order = await prisma.order.create({
-            data: { userId, productId, quantity },
-        });
-
-        await prisma.product.update({
-            where: { id: productId },
-            data: { stock: { decrement: quantity } },
-        });
+        const [order] = await prisma.$transaction([
+            prisma.order.create({
+                data: { userId, productId, quantity },
+            }),
+            prisma.product.update({
+                where: { id: productId },
+                data: { stock: { decrement: quantity } },
+            }),
+        ]);
 
         res.status(201).json(order);
     } catch (error) {
         if (error instanceof z.ZodError) {
-            res.status(400).json({ error: "Validation error", details: error.errors });
+            res.status(400).json({ error: 'Validation error', details: error.errors });
             return;
         }
         res.status(500).json({ error: 'Failed to create order', details: error });
     }
 };
+
+
+
+export const getOrderById = async (req: Request, res: Response) => {
+    const { orderId } = req.params;
+    try {
+        const orderIdNumber = Number(orderId);
+        if (isNaN(orderIdNumber)) {
+            res.status(400).json({ error: "Invalid order ID" });
+            return;
+        }
+
+        const order = await prisma.order.findUnique({
+            where: { id: orderIdNumber },
+        });
+
+        if (!order) {
+            res.status(404).json({ error: 'Order not found' });
+            return;
+        }
+
+        res.status(200).json(order);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch order', details: error });
+    }
+};
+
+export const updateOrder = async (req: Request, res: Response) => {
+    const { orderId } = req.params;
+    const { status } = req.body;
+
+    try {
+        const orderIdNumber = Number(orderId);
+        if (isNaN(orderIdNumber)) {
+            res.status(400).json({ error: "Invalid order ID" });
+            return;
+        }
+
+        const order = await prisma.order.update({
+            where: { id: orderIdNumber },
+            data: {
+                status: status || undefined,
+            },
+        });
+
+        res.status(200).json(order);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to update order', details: error });
+    }
+};
+
 
 export const getRecentOrders = async (req: Request, res: Response) => {
     try {
