@@ -75,7 +75,7 @@
 
 ### Get Recent Orders
 `GET /orders/recent`
-- **Description**: Retrieves the most recent orders.
+ - **Description**: Retrieves the orders from last 7 days.
 - **Response**: Returns an array of recent order objects.
 
 ### Get Orders by User
